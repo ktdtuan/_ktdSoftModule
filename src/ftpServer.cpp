@@ -234,6 +234,33 @@ bool ftpServer::folder(String dir)
 	this->wait_answer();
 	return true;
 }
+bool ftpServer::listDir(String dir, void (*cbFileName)(const char *name, size_t size))
+{
+	if (this->isConnect == false)
+		return false;
+	dbg_ftp("Send MLSD %s", dir.c_str());
+	this->client->print(F("MLSD"));
+	this->client->println(dir);
+	dbg_ftp("1");
+	this->wait_answer();
+
+	unsigned long _m = millis();
+	dbg_ftp("2");
+	while (!this->client->available() && millis() < _m + timeout)
+		delay(1);
+	dbg_ftp("3");
+
+	String result;
+	while (this->client->available())
+	{
+		result = this->client->readStringUntil('\n');
+		dbg_ftp("Result is: %s, size %d", result.c_str(), result.length());
+		if (cbFileName != NULL)
+			cbFileName(result.c_str(), result.length());
+	}
+	dbg_ftp("4");
+	return true;
+}
 
 // pull
 size_t ftpServer::size(String name)
@@ -253,7 +280,7 @@ size_t ftpServer::size(String name)
 		if (result.length() <= 0)
 			return 0;
 
-		dbg_ftp("Result is: %s, size %d\r", result.c_str(), result.length());
+		dbg_ftp("Result is: %s, size %d", result.c_str(), result.length());
 
 		uint8_t idResult = result.indexOf("213 ") + 4;
 		return result.substring(idResult, result.length()).toInt();

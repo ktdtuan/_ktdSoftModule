@@ -19,6 +19,22 @@ public:
 	int available() override { return 0; }
 	int read() override { return -1; }
 
+	void listDir(void (*cbFileName)(const char *name, size_t size))
+	{
+		File root = _fs->open(_fileName.c_str());
+		if (!root || !root.isDirectory())
+			return;
+
+		File file = root.openNextFile();
+		while (file)
+		{
+			if (cbFileName != NULL)
+				cbFileName(file.name(), file.size());
+
+			file = root.openNextFile();
+		}
+	}
+
 	int read(uint8_t *buff, size_t size)
 	{
 		// Nếu không có file

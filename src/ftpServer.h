@@ -47,6 +47,7 @@ public:
 	bool check_file(String name);
 	size_t size(String name);
 	bool folder(String dir);
+	bool listDir(String dir, void (*cbFileName)(const char *name, size_t size));
 
 	// check
 	bool isConnected(void)
