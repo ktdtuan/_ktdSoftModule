@@ -6,11 +6,25 @@
 
 #define dbg_download(fmt, ...) Serial.printf(PSTR("[Download] " fmt "\r\n"), ##__VA_ARGS__)
 
+typedef enum
+{
+	ftp2fsErrNull = 0,
+	ftp2fsErrConnect,
+	ftp2fsErrFolder,
+	ftp2fsErrFile,
+	ftp2fsErrSize,
+	ftp2fsErrStart,
+	ftp2fsErrRam,
+	ftp2fsErrDown,
+	ftp2fsErrWrite,
+} ftp2fsErrEvent_t;
+
 class ftp2fs
 {
 private:
 	ftpServer *_from;
 	utilityFs *_to;
+	ftp2fsErrEvent_t _error;
 
 public:
 	ftp2fs(ftpServer &from, utilityFs &to) : _from(&from), _to(&to) {}
@@ -19,31 +33,49 @@ public:
 	{
 		// check connected
 		if (_from->isConnected() == false)
+		{
+			_error = ftp2fsErrConnect;
 			return false;
+		}
 
 		// select forlder in ftp
 		if (_from->folder(from_path) == false)
+		{
+			_error = ftp2fsErrFolder;
 			return false;
+		}
 
 		// check file in ftp
 		if (_from->check_file(from_file) == false)
+		{
+			_error = ftp2fsErrFile;
 			return false;
+		}
 
 		// read size of file. prepare size to download
 		size_t size = _from->size(from_file);
 		dbg_download("size %d", size);
 		if (size == 0)
+		{
+			_error = ftp2fsErrSize;
 			return false;
+		}
 
 		// start download
 		if (_from->start_download(from_file) == false)
+		{
+			_error = ftp2fsErrStart;
 			return false;
+		}
 
 		// importune ram free
 		size_t size_appent = 4096;
 		uint8_t *buff = (uint8_t *)malloc(size_appent + 10);
 		if (buff == NULL)
+		{
+			_error = ftp2fsErrRam;
 			return false;
+		}
 
 		// check and delete file in memory local
 		if (_to->check() == true)
@@ -59,6 +91,7 @@ public:
 			if (_from->downloading(buff, size_appent) != size_appent)
 			{
 				dbg_download("download error");
+				_error = ftp2fsErrDown;
 				break;
 			}
 
@@ -66,6 +99,7 @@ public:
 			if (_to->write(buff, size_appent) != size_appent)
 			{
 				dbg_download("write error");
+				_error = ftp2fsErrWrite;
 				break;
 			}
 
@@ -78,7 +112,7 @@ public:
 
 		// stop download
 		free(buff);
-		// _from->stop_download();
+		_from->stop_download();
 
 		if (size != 0)
 			return false;
@@ -95,6 +129,11 @@ public:
 	bool download(String from_file)
 	{
 		return download("", from_file, "");
+	}
+
+	ftp2fsErrEvent_t getError(void)
+	{
+		return _error;
 	}
 };
 #endif

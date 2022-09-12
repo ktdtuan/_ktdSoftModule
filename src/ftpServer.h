@@ -5,6 +5,24 @@
 
 #define dbg_ftp(fmt, ...) Serial.printf(PSTR("[FTP] " fmt "\r\n"), ##__VA_ARGS__)
 
+typedef enum
+{
+	ftpServerErrNull = 0,
+	ftpServerErrConnect,
+	ftpServerErrUser,
+	ftpServerErrPass,
+	ftpServerErrSys,
+	ftpServerErrOS,
+	ftpServerErrType,
+	ftpServerErrPasv,
+	ftpServerErrListFile,
+	ftpServerErrCWD,
+	ftpServerErrListDir,
+	ftpServerErrRetr,
+	ftpServerErrCreatFile,
+	ftpServerErrWriteAppend,
+} ftpServerErrEvent_t;
+
 class ftpServer
 {
 private:
@@ -20,6 +38,7 @@ private:
 	// status
 	int32_t timeout;
 	bool isConnect = false;
+	ftpServerErrEvent_t _error = ftpServerErrNull;
 
 	// CMD reply
 	String outBuf = "";
@@ -50,6 +69,10 @@ public:
 	bool listDir(String dir, void (*cbFileName)(const char *name, size_t size));
 
 	// check
+	ftpServerErrEvent_t getError(void)
+	{
+		return _error;
+	}
 	bool isConnected(void)
 	{
 		return isConnect;

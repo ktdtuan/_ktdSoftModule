@@ -6,11 +6,20 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+typedef enum{
+	utilityFsErrNull = 0,
+	utilityFsErrListDir,
+	utilityFsErrRead,
+	utilityFsErrWrite,
+	utilityFsErrSize,
+}utilityFsErrEvent_t;
+
 class utilityFs : public Stream
 {
 private:
 	fs::FS *_fs;
 	String _fileName;
+	utilityFsErrEvent_t _error;
 
 public:
 	utilityFs(fs::FS &fs, const char *fileName) : _fs(&fs), _fileName(fileName) {}
@@ -23,7 +32,10 @@ public:
 	{
 		File root = _fs->open(_fileName.c_str());
 		if (!root || !root.isDirectory())
+		{
+			_error = utilityFsErrListDir;
 			return;
+		}
 
 		File file = root.openNextFile();
 		while (file)
@@ -39,11 +51,17 @@ public:
 	{
 		// Nếu không có file
 		if (_fs->exists(_fileName.c_str()) == false)
+		{
+			_error = utilityFsErrRead;
 			return -1;
+		}
 
 		File file = _fs->open(_fileName.c_str(), FILE_READ);
 		if (!file)
+		{
+			_error = utilityFsErrRead;
 			return -1;
+		}
 
 		size_t _f_size = file.size();
 		if (size == -1 || size > _f_size)
@@ -68,7 +86,8 @@ public:
 	size_t write(const uint8_t *buffer, size_t size) override
 	{
 		File fs_handle = _fs->open(_fileName, FILE_APPEND);
-		fs_handle.write(buffer, size);
+		if(fs_handle.write(buffer, size) != size)
+			_error = utilityFsErrWrite;
 		fs_handle.close();
 		return size;
 	}
@@ -88,10 +107,17 @@ public:
 	{
 		File file = _fs->open(_fileName.c_str(), FILE_READ);
 		if (!file)
+		{
+			_error = utilityFsErrSize;
 			return -1;
+		}
 		size_t _f_size = file.size();
 		file.close();
 		return _f_size;
+	}
+	utilityFsErrEvent_t getError(void)
+	{
+		return _error;
 	}
 };
 

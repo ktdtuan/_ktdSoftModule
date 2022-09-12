@@ -19,7 +19,7 @@ private:
 	PubSubClient *_mqttPubSub;
 
 public:
-	mqttServer(const char *server, uint16_t port, const char *user, const char *pass) : _user(_user), _pass(pass)
+	mqttServer(const char *server, uint16_t port, const char *user, const char *pass) : _user(user), _pass(pass)
 	{
 		_mqttClient = new WiFiClient;
 		_mqttPubSub = new PubSubClient(server, port, *_mqttClient);
@@ -28,6 +28,11 @@ public:
 	{
 		delete _mqttClient;
 		delete _mqttPubSub;
+	}
+
+	bool isConnected(void)
+	{
+		return _isConnect;
 	}
 
 	void subscribe(const char *topic, rxCallback rxCb)

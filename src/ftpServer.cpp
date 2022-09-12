@@ -84,9 +84,15 @@ bool ftpServer::connect(const char *host, uint16_t port, const char *user, const
 {
 	dbg_ftp("connectting");
 	if (!this->client->connect(host, port, this->timeout))
+	{
+		_error = ftpServerErrConnect;
 		return false;
+	}
 	if (this->wait_answer() == false)
+	{
+		_error = ftpServerErrConnect;
 		return false;
+	}
 
 	this->client->setTimeout(this->timeout);
 
@@ -94,18 +100,27 @@ bool ftpServer::connect(const char *host, uint16_t port, const char *user, const
 	this->client->print(F("USER "));
 	this->client->println(user);
 	if (this->wait_answer() == false)
+	{
+		_error = ftpServerErrUser;
 		return false;
+	}
 
 	dbg_ftp("Send PASS");
 	this->client->print(F("PASS "));
 	this->client->println(pass);
 	if (this->wait_answer() == false)
+	{
+		_error = ftpServerErrPass;
 		return false;
+	}
 
 	dbg_ftp("Send SYST");
 	this->client->println(F("SYST"));
 	if (this->wait_answer() == false)
+	{
+		_error = ftpServerErrSys;
 		return false;
+	}
 
 	// nếu không phải hệ điều hành windown
 	if (this->outBuf.indexOf(systern_windown) == -1)
@@ -113,12 +128,18 @@ bool ftpServer::connect(const char *host, uint16_t port, const char *user, const
 		dbg_ftp("Send PBSZ 0");
 		this->client->println(F("PBSZ 0"));
 		if (this->wait_answer() == false)
+		{
+			_error = ftpServerErrOS;
 			return false;
+		}
 
 		dbg_ftp("Send PROT P");
 		this->client->println(F("PROT P"));
 		if (this->wait_answer() == false)
+		{
+			_error = ftpServerErrOS;
 			return false;
+		}
 	}
 
 	this->isConnect = true;
@@ -149,12 +170,18 @@ bool ftpServer::init_file(const char *type)
 	dbg_ftp("Send TYPE");
 	this->client->println(F(type));
 	if (this->wait_answer() == false)
+	{
+		_error = ftpServerErrType;
 		return false;
+	}
 
 	dbg_ftp("Send PASV");
 	this->client->println(F("PASV"));
 	if (this->wait_answer() == false)
+	{
+		_error = ftpServerErrPasv;
 		return false;
+	}
 
 	char *tStr = strtok((char *)this->outBuf.c_str(), "(,");
 	int array_pasv[6];
@@ -192,7 +219,10 @@ bool ftpServer::check_file(String name) // LIST, NLST
 	this->client->print(F("NLST"));
 	this->client->println(F(""));
 	if (this->wait_answer() == false)
+	{
+		_error = ftpServerErrListFile;
 		return false;
+	}
 
 	unsigned long _m = millis();
 	while (!this->dclient->available() && millis() < _m + timeout)
@@ -231,7 +261,11 @@ bool ftpServer::folder(String dir)
 	dbg_ftp("Send CWD %s", dir.c_str());
 	this->client->print(F("CWD "));
 	this->client->println(dir);
-	this->wait_answer();
+	if (this->wait_answer() == false)
+	{
+		_error = ftpServerErrCWD;
+		return false;
+	}
 	return true;
 }
 bool ftpServer::listDir(String dir, void (*cbFileName)(const char *name, size_t size))
@@ -242,7 +276,11 @@ bool ftpServer::listDir(String dir, void (*cbFileName)(const char *name, size_t 
 	this->client->print(F("MLSD"));
 	this->client->println(dir);
 	dbg_ftp("1");
-	this->wait_answer();
+	if (this->wait_answer() == false)
+	{
+		_error = ftpServerErrListDir;
+		return false;
+	}
 
 	unsigned long _m = millis();
 	dbg_ftp("2");
@@ -299,7 +337,10 @@ bool ftpServer::start_download(String name)
 	this->client->print(F("RETR "));
 	this->client->println(name);
 	if (this->wait_answer() == false)
+	{
+		_error = ftpServerErrRetr;
 		return false;
+	}
 
 	return true;
 }
@@ -333,7 +374,11 @@ void ftpServer::new_file(String name)
 	dbg_ftp("Send STOR %s", name);
 	this->client->print(F("STOR "));
 	this->client->println(name);
-	this->wait_answer();
+	if (this->wait_answer() == false)
+	{
+		_error = ftpServerErrCreatFile;
+		return;
+	}
 }
 void ftpServer::append_file(String name)
 {
@@ -342,8 +387,13 @@ void ftpServer::append_file(String name)
 	dbg_ftp("Send APPE %s", name);
 	this->client->print(F("APPE "));
 	this->client->println(name);
-	this->wait_answer();
+	if (this->wait_answer() == false)
+	{
+		_error = ftpServerErrWriteAppend;
+		return;
+	}
 }
+
 bool ftpServer::uploading(String name, uint8_t *data, size_t length)
 {
 #define bufferSize 1500
