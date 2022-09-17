@@ -19,7 +19,7 @@ class utilityFs : public Stream
 private:
 	fs::FS *_fs;
 	String _fileName;
-	utilityFsErrEvent_t _error;
+	utilityFsErrEvent_t _error = utilityFsErrNull;
 
 public:
 	utilityFs(fs::FS &fs, const char *fileName) : _fs(&fs), _fileName(fileName) {}

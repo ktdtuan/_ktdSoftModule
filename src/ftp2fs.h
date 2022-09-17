@@ -24,7 +24,7 @@ class ftp2fs
 private:
 	ftpServer *_from;
 	utilityFs *_to;
-	ftp2fsErrEvent_t _error;
+	ftp2fsErrEvent_t _error = ftp2fsErrNull;
 
 public:
 	ftp2fs(ftpServer &from, utilityFs &to) : _from(&from), _to(&to) {}
